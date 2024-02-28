@@ -56,24 +56,33 @@ export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const query = "interstellar";
 
   // This effect will only run on mount, when the application first load
   useEffect(function () {
     async function fetchMovies() {
-      setIsLoading(true);
-      const res = await fetch(
-        `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-      );
-      const data = await res.json();
-      setMovies(data.Search);
-      // movies will not be set immediately after setMovies
-      // The line below wont show the new value of movies
-      // console.log(movies);
-      // The data from the API is however available
-      //console.log(data.Search);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+        );
+
+        if (!res.ok)
+          throw new Error("Something went wrong with fetching movide");
+
+        const data = await res.json();
+
+        if (data.Response === "False") throw new Error("Movie(s) not found");
+
+        setMovies(data.Search);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchMovies();
   }, []); // This empty array means the useEffect will only be executed after the first mount.
@@ -93,13 +102,26 @@ export default function App() {
       </NavBar>
 
       <Main>
-        <Box>{isLoading ? <Loader /> : <MoviesList movies={movies} />}</Box>
+        <Box>
+          {/* {isLoading ? <Loader /> : <MoviesList movies={movies} />} */}
+          {isLoading && <Loader />}
+          {!isLoading && !error && <MoviesList movies={movies} />}
+          {error && <ErrorMessage message={error} />}
+        </Box>
         <Box>
           <WatchedSummary watched={watched} />
           <WatchedMoviesList watched={watched} />
         </Box>
       </Main>
     </>
+  );
+}
+
+function ErrorMessage({ message }) {
+  return (
+    <p className="error">
+      <span>🚫 {message}</span>
+    </p>
   );
 }
 
