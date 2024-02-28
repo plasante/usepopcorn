@@ -53,39 +53,70 @@ const average = (arr) =>
 const KEY = "2655cc14";
 
 export default function App() {
+  const [query, setQuery] = useState("inception");
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const query = "interstellar";
+  const tempQuery = "interstellar";
+
+  // // This will not be executed
+  // useEffect(function () {
+  //   console.log("After initial render");
+  // }, []);
+
+  // // This will run on every render
+  // useEffect(function () {
+  //   console.log("After every render");
+  // });
+
+  // useEffect(
+  //   function () {
+  //     console.log("D");
+  //   },
+  //   [query]
+  // );
+
+  // console.log("During render");
 
   // This effect will only run on mount, when the application first load
-  useEffect(function () {
-    async function fetchMovies() {
-      try {
-        setIsLoading(true);
+  useEffect(
+    function () {
+      async function fetchMovies() {
+        try {
+          setIsLoading(true);
 
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-        );
+          setError("");
 
-        if (!res.ok)
-          throw new Error("Something went wrong with fetching movide");
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+          );
 
-        const data = await res.json();
+          if (!res.ok)
+            throw new Error("Something went wrong with fetching movide");
 
-        if (data.Response === "False") throw new Error("Movie(s) not found");
+          const data = await res.json();
 
-        setMovies(data.Search);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+          if (data.Response === "False") throw new Error("Movie(s) not found");
+
+          setMovies(data.Search);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-    fetchMovies();
-  }, []); // This empty array means the useEffect will only be executed after the first mount.
+
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+      fetchMovies();
+    },
+    [query]
+  ); // This empty array means the useEffect will only be executed after the first mount.
 
   // Interaction in the outside world should never be allowed in the render logic.
   // This will cause the component to rerender infinitely
@@ -97,7 +128,7 @@ export default function App() {
     <>
       <NavBar>
         <Logo />
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <NumResults movies={movies} />
       </NavBar>
 
@@ -142,8 +173,7 @@ function Logo() {
   );
 }
 
-function Search() {
-  const [query, setQuery] = useState("");
+function Search({ query, setQuery }) {
   return (
     <input
       className="search"
