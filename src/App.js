@@ -55,17 +55,25 @@ const KEY = "2655cc14";
 export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   const query = "interstellar";
 
   // This effect will only run on mount, when the application first load
   useEffect(function () {
     async function fetchMovies() {
+      setIsLoading(true);
       const res = await fetch(
         `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
       );
       const data = await res.json();
       setMovies(data.Search);
-      console.log(data.Search);
+      // movies will not be set immediately after setMovies
+      // The line below wont show the new value of movies
+      // console.log(movies);
+      // The data from the API is however available
+      //console.log(data.Search);
+      setIsLoading(false);
     }
     fetchMovies();
   }, []); // This empty array means the useEffect will only be executed after the first mount.
@@ -85,18 +93,7 @@ export default function App() {
       </NavBar>
 
       <Main>
-        {/* <Box element={<MoviesList movies={movies} />} />
-        <Box
-          element={
-            <>
-              <WatchedSummary watched={watched} />
-              <WatchedMoviesList watched={watched} />
-            </>
-          }
-        /> */}
-        <Box>
-          <MoviesList movies={movies} />
-        </Box>
+        <Box>{isLoading ? <Loader /> : <MoviesList movies={movies} />}</Box>
         <Box>
           <WatchedSummary watched={watched} />
           <WatchedMoviesList watched={watched} />
@@ -104,6 +101,10 @@ export default function App() {
       </Main>
     </>
   );
+}
+
+function Loader() {
+  return <p className="loader">Loading...</p>;
 }
 
 function NavBar({ children }) {
