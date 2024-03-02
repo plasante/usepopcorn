@@ -54,7 +54,7 @@ const average = (arr) =>
 const KEY = "2655cc14";
 
 export default function App() {
-  const [query, setQuery] = useState("inception");
+  const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -99,6 +99,8 @@ export default function App() {
   // This effect will only run on mount, when the application first load
   useEffect(
     function () {
+      const controller = new AbortController();
+
       async function fetchMovies() {
         try {
           setIsLoading(true);
@@ -106,7 +108,8 @@ export default function App() {
           setError("");
 
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+            { signal: controller.signal }
           );
 
           if (!res.ok)
@@ -117,8 +120,12 @@ export default function App() {
           if (data.Response === "False") throw new Error("Movie(s) not found");
 
           setMovies(data.Search);
+          setError("");
         } catch (err) {
-          setError(err.message);
+          if (err.name !== "AbortError") {
+            console.log(err.message);
+            setError(err.message);
+          }
         } finally {
           setIsLoading(false);
         }
@@ -129,7 +136,13 @@ export default function App() {
         setError("");
         return;
       }
+
+      handleCloseMovie();
       fetchMovies();
+
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   ); // This empty array means the useEffect will only be executed after the first mount.
@@ -305,6 +318,23 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     onCloseMovie();
   }
 
+  useEffect(
+    function () {
+      function callback(e) {
+        if (e.code === "Escape") {
+          onCloseMovie();
+        }
+      }
+
+      document.addEventListener("keydown", callback);
+
+      return function () {
+        document.removeEventListener("keydown", callback);
+      };
+    },
+    [onCloseMovie]
+  );
+
   // This useEffect is run only once
   useEffect(
     function () {
@@ -320,6 +350,19 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       setIsLoading(false);
     },
     [selectedId]
+  );
+
+  useEffect(
+    function () {
+      if (!title) return;
+      document.title = `Movie | ${title}`;
+
+      // cleanup function
+      return function () {
+        document.title = "usePopcorn";
+      };
+    },
+    [title]
   );
 
   return (
